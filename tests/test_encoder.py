@@ -1,4 +1,4 @@
-from main import OneHotEncoder, OneHotEncoding
+from encoder import OneHotEncoder, OneHotEncoding
 
 
 def test_enconding_1():
