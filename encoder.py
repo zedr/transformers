@@ -17,7 +17,7 @@ class OneHotEncoding:
         if max_ := max(words_ns) > size:
             raise ValueError(f"Out of bounds: {size} < {max_}")
         if min(words_ns) < 0:
-            raise ValueError(f"Words cannot have a negative encoding")
+            raise ValueError("Words cannot have a negative encoding")
 
         self._size = size
         self._words_ns = words_ns
