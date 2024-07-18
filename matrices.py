@@ -32,7 +32,7 @@ def dot_product(
     return acc
 
 
-def columns(
+def take_columns(
         matrix: Sequence[Sequence[T]]
 ) -> Generator[list[T], None, None]:
     n_cols = get_size(matrix).cols
@@ -47,7 +47,7 @@ def mat_mul(
     rows = []
     for v1 in m1:
         cols = []
-        for v2 in columns(m2):
+        for v2 in take_columns(m2):
             cols.append(dot_product(v1, v2))
         rows.append(cols)
 
