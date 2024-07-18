@@ -19,11 +19,7 @@ def test_encoder_encoding():
     enc = OneHotEncoder(words)
     encoding = enc.encode("find", "my", "files")
     encoding = [list(item) for item in encoding]
-    assert encoding == [
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [1, 0, 0, 0]
-    ]
+    assert encoding == [[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0]]
 
 
 def tut_test_1():

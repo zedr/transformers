@@ -2,13 +2,13 @@ from words import words_rxp, add_one_and_rebalance, OrderedSet, MarkovChain
 
 
 def test_add_and_rebalance():
-    seq = [.0, .0, .0, .0]
+    seq = [0.0, 0.0, 0.0, 0.0]
     add_one_and_rebalance(seq, 0)
-    assert seq == [1.0, .0, .0, .0]
+    assert seq == [1.0, 0.0, 0.0, 0.0]
     add_one_and_rebalance(seq, 0)
-    assert seq == [1.0, .0, .0, .0]
+    assert seq == [1.0, 0.0, 0.0, 0.0]
     add_one_and_rebalance(seq, 1)
-    assert seq == [.5, .5, .0, .0]
+    assert seq == [0.5, 0.5, 0.0, 0.0]
 
 
 def test_words_rxp():
@@ -43,8 +43,10 @@ def test_parse_sentence_into_markov_chain():
 
 def test_parse_sentence_and_apply_weights():
     chain = MarkovChain().add_text("show me my photos please")
-    assert chain._matrix == [[0, 1, 0, 0, 0],
-                             [0, 0, 1, 0, 0],
-                             [0, 0, 0, 1, 0],
-                             [0, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 0]]
+    assert chain._matrix == [
+        [0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0],
+    ]
