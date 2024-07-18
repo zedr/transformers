@@ -10,7 +10,7 @@ def get_size(matrix: Sequence[Sequence[Any]]) -> Size:
     """Get the size of a matrix"""
     rows = len(matrix)
     lengths = [len(row) for row in matrix]
-    if all(True for l in lengths if l == (cols := lengths[0])):
+    if all(True for ln in lengths if ln == (cols := lengths[0])):
         return Size(rows, cols)
     else:
         raise ValueError(
@@ -43,7 +43,7 @@ def take_columns(
 def mat_mul(
         m1: Sequence[Sequence[int | float]],
         m2: Sequence[Sequence[int | float]],
-) -> list[list[float, None, None], None, None]:
+) -> list[list[float]]:
     rows = []
     for v1 in m1:
         cols = []

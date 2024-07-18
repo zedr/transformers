@@ -1,0 +1,11 @@
+digraph test {
+    rankdir="LR";
+    Show -> me [label="1"];
+    me -> my [label="1"];
+    my -> directories [label=".2"];
+    my -> files [label=".3"];
+    my -> photos [label=".5"];
+    directories -> please [label="1"];
+    files -> please [label="1"];
+    photos -> please [label="1"];
+}
