@@ -27,9 +27,17 @@ class OrderedSet:
         for item in initial:
             self.add(item)
 
-    def add(self, item: T) -> None:
-        """Add an item to the set"""
-        self._ns[item] = True
+    def add(self, item: T) -> bool:
+        """Add an item to the set
+
+        If the item was already present, return False
+        If the item wasn't present, return True
+        """
+        if item in self._ns:
+            return False
+        else:
+            self._ns[item] = True
+            return True
 
     def index(self, item: T) -> int:
         return tuple(self._ns).index(item)
@@ -64,10 +72,11 @@ class MarkovChain:
 
     def _add_word(self, word: str) -> None:
         """Grow the namespace of the chain by adding a single word to it"""
-        self._words.add(word)
-        for row in self._matrix:
-            row += [0]
-        self._matrix.append([0] * len(self._words))
+        added = self._words.add(word)
+        if added:
+            for row in self._matrix:
+                row += [0]
+            self._matrix.append([0] * len(self._words))
 
     def _update(self, words: Sequence[T]) -> None:
         """Update this chain with the given sequence of words"""

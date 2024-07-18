@@ -50,3 +50,11 @@ def test_parse_sentence_and_apply_weights():
         [0, 0, 0, 0, 1],
         [0, 0, 0, 0, 0],
     ]
+    chain.add_text("show me my documents please")
+    assert chain._matrix == [
+        [0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0],
+    ]
