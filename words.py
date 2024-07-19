@@ -1,7 +1,6 @@
 import os
 import re
-import math
-from typing import TypeVar, Literal, Sequence, MutableSequence
+from typing import TypeVar, Literal, Sequence, Optional, Iterator
 from collections import OrderedDict
 
 from encoder import OneHotEncoding
@@ -14,14 +13,24 @@ LiteralTrue = Literal[True]
 words_rxp = re.compile(r"(\w+)+")
 
 
-def add_one_and_rebalance(seq: MutableSequence[float], idx: int) -> None:
-    """Add an element to a list and re-balance the ratio across it"""
-    seq[idx] = math.nan
-    count = sum(1 for item in seq if item)
-    new_value = 1.0 if count == 0 else 1 / count
-    for num in range(len(seq)):
-        if seq[num]:
-            seq[num] = new_value
+class WeightedList:
+    def __init__(self, initial: Optional[Sequence[int]] = None):
+        self._seq = [] if initial is None else list(initial)
+
+    def expand(self, size: int = 1) -> "WeightedList":
+        self._seq += [0] * size
+        return self
+
+    def inc(self, index: int) -> "WeightedList":
+        self._seq[index] += 1
+        return self
+
+    def __iter__(self) -> Iterator[float]:
+        tot_weight = sum(self._seq)
+        return iter(val / tot_weight if tot_weight else 0.0 for val in self._seq)
+
+    def __repr__(self):
+        return f"{type(self).__name__}(initial={self._seq})"
 
 
 class OrderedSet:
@@ -71,7 +80,10 @@ class MarkovChain:
 
     def __init__(self):
         self._words = OrderedSet(str)
-        self._matrix = []
+        self._matrix: list[WeightedList] = []
+
+    def as_matrix(self) -> list[list[float]]:
+        return [list(row) for row in self._matrix]
 
     @property
     def tokens(self) -> tuple[str]:
@@ -82,8 +94,8 @@ class MarkovChain:
         added = self._words.add(word)
         if added:
             for row in self._matrix:
-                row += [0]
-            self._matrix.append([0] * len(self._words))
+                row.expand()
+            self._matrix.append(WeightedList().expand(size=len(self._words)))
 
     def _update(self, words: Sequence[T]) -> None:
         """Update this chain with the given sequence of words"""
@@ -96,7 +108,7 @@ class MarkovChain:
             else:
                 idx_next_word = self._words.index(next_word)
                 row_word = self._matrix[idx_word]
-                add_one_and_rebalance(row_word, idx_next_word)
+                row_word.inc(idx_next_word)
 
     def add_text(self, text: str) -> "MarkovChain":
         """Parse a sentence and add it to this chain"""
@@ -132,7 +144,7 @@ class MarkovChain:
     def get_distribution(self, word: T) -> list[float]:
         """Get the one hot encoded probability distribution for a word"""
         encoded_word = list(self.encode(word))
-        result = mat_mul([encoded_word], self._matrix)
+        result = mat_mul([encoded_word], self.as_matrix())
         return result[0]
 
     def get_transitions(self, word: T) -> dict[str, float]:

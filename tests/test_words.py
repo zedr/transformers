@@ -1,16 +1,21 @@
 import pytest
 
-from words import words_rxp, add_one_and_rebalance, OrderedSet, MarkovChain
+from words import words_rxp, OrderedSet, MarkovChain, WeightedList
 
 
-def test_add_and_rebalance():
-    seq = [0.0, 0.0, 0.0, 0.0]
-    add_one_and_rebalance(seq, 0)
-    assert seq == [1.0, 0.0, 0.0, 0.0]
-    add_one_and_rebalance(seq, 0)
-    assert seq == [1.0, 0.0, 0.0, 0.0]
-    add_one_and_rebalance(seq, 1)
-    assert seq == [0.5, 0.5, 0.0, 0.0]
+def test_weighted_list():
+    seq = WeightedList()
+    assert list(seq) == []
+    seq.expand()
+    seq.inc(index=0)
+    assert list(seq) == [1.0]
+    seq.expand()
+    assert list(seq) == [1.0, 0.0]
+    seq.inc(index=1)
+    assert list(seq) == [0.5, 0.5]
+    seq2 = WeightedList()
+    seq2.expand(size=5)
+    assert list(seq2) == [0, 0, 0, 0, 0]
 
 
 def test_words_rxp():
@@ -32,11 +37,11 @@ def test_ordered_set():
 def test_basic_markov_chain():
     chain = MarkovChain()
     assert chain.tokens == ()
-    assert chain._matrix == []
+    assert chain.as_matrix() == []
     chain.add_text("one")
-    assert chain._matrix == [[0]]
+    assert chain.as_matrix() == [[0]]
     chain.add_text("two")
-    assert chain._matrix == [[0, 0], [0, 0]]
+    assert chain.as_matrix() == [[0, 0], [0, 0]]
 
 
 def test_parse_sentence_into_markov_chain():
@@ -46,7 +51,7 @@ def test_parse_sentence_into_markov_chain():
 
 def test_parse_sentence_and_apply_weights():
     chain = MarkovChain().add_text("show me my photos please")
-    assert chain._matrix == [
+    assert chain.as_matrix() == [
         [0, 1, 0, 0, 0],
         [0, 0, 1, 0, 0],
         [0, 0, 0, 1, 0],
@@ -54,7 +59,7 @@ def test_parse_sentence_and_apply_weights():
         [0, 0, 0, 0, 0],
     ]
     chain.add_text("show me my documents please")
-    assert chain._matrix == [
+    assert chain.as_matrix() == [
         [0, 1.0, 0, 0, 0, 0],
         [0, 0, 1.0, 0, 0, 0],
         [0, 0, 0, 0.5, 0, 0.5],
@@ -95,7 +100,15 @@ def test_get_distribution():
     chain.add_text("I give Lila a toy boat")
     chain.add_text("I give Sami a diving mask")
     assert chain.get_distribution("give") == [
-        0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
     ]
     with pytest.raises(ValueError):
         chain.get_distribution("foo")
@@ -106,3 +119,6 @@ def test_get_transitions():
     chain.add_text("I give Lila a toy boat")
     chain.add_text("I give Sami a diving mask")
     assert chain.get_transitions("give") == {"Lila": 0.5, "Sami": 0.5}
+    chain.add_text("I give Sami another diving mask")
+    chain.add_text("I give Sami another toy boat")
+    assert chain.get_transitions("give") == {"Lila": 0.25, "Sami": 0.75}
