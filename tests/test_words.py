@@ -1,3 +1,5 @@
+import pytest
+
 from words import words_rxp, add_one_and_rebalance, OrderedSet, MarkovChain
 
 
@@ -86,6 +88,17 @@ def test_get_one_hot_encoding_for_word():
     chain = MarkovChain()
     chain.add_text("I give Lila a toy boat")
     assert list(chain.encode("Lila")) == [0, 0, 1, 0, 0, 0]
+
+
+def test_get_distribution():
+    chain = MarkovChain()
+    chain.add_text("I give Lila a toy boat")
+    chain.add_text("I give Sami a diving mask")
+    assert chain.get_distribution("give") == [
+        0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0
+    ]
+    with pytest.raises(ValueError):
+        chain.get_distribution("foo")
 
 
 def test_get_transitions():

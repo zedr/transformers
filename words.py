@@ -122,10 +122,20 @@ class MarkovChain:
 
     def encode(self, word: T) -> OneHotEncoding:
         """Get the one hot eoding of the given word in this namespace"""
-        return OneHotEncoding(len(self.tokens), {self.tokens.index(word): str(word)})
+        try:
+            idx = self.tokens.index(word)
+        except ValueError:
+            raise ValueError(f"Word not in namespace: '{word}'")
+        else:
+            return OneHotEncoding(len(self.tokens), {idx: str(word)})
+
+    def get_distribution(self, word: T) -> list[float]:
+        """Get the one hot encoded probability distribution for a word"""
+        encoded_word = list(self.encode(word))
+        result = mat_mul([encoded_word], self._matrix)
+        return result[0]
 
     def get_transitions(self, word: T) -> dict[str, float]:
         """Get all the probable transitions for a word"""
-        encoded_word = list(self.encode(word))
-        result = mat_mul([encoded_word], self._matrix)
-        return {key: val for key, val in zip(self.tokens, result[0]) if val}
+        dist = self.get_distribution(word)
+        return {key: val for key, val in zip(self.tokens, dist) if val}
