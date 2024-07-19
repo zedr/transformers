@@ -32,6 +32,14 @@ class OneHotEncoding:
         for idx in range(self._size):
             yield 1 if self._words_ns.get(idx) else 0
 
+    def __repr__(self):
+        return (
+            f"{type(self).__name__}("
+            f"size={self._size}, "
+            f"words_ns={self._words_ns}"
+            f")"
+        )
+
 
 class OneHotEncoder:
     """One hot encoder using a list of given words"""

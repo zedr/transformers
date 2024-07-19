@@ -4,6 +4,9 @@ import math
 from typing import TypeVar, Literal, Sequence, MutableSequence
 from collections import OrderedDict
 
+from encoder import OneHotEncoding
+from matrices import mat_mul
+
 T = TypeVar("T", str, bytes)
 
 LiteralTrue = Literal[True]
@@ -105,19 +108,24 @@ class MarkovChain:
 
     def render_as_dot(self) -> str:
         """Render this Markov chain as a DOT graph"""
-        lines = [
-            'digraph G {',
-            '    rankdir="LR";'
-        ]
+        lines = ["digraph G {", '    rankdir="LR";']
         for idx in range(len(self._matrix)):
             word = self._words[idx]
             row = self._matrix[idx]
             for rdx, value in enumerate(row):
                 if value:
-                    next_word =self._words[rdx]
-                    lines.append(
-                        f'    {word} -> {next_word} [label="{value}"];'
-                    )
+                    next_word = self._words[rdx]
+                    lines.append(f'    {word} -> {next_word} [label="{value}"];')
 
         lines += "}"
         return os.linesep.join(lines)
+
+    def encode(self, word: T) -> OneHotEncoding:
+        """Get the one hot eoding of the given word in this namespace"""
+        return OneHotEncoding(len(self.tokens), {self.tokens.index(word): str(word)})
+
+    def get_transitions(self, word: T) -> dict[str, float]:
+        """Get all the probable transitions for a word"""
+        encoded_word = list(self.encode(word))
+        result = mat_mul([encoded_word], self._matrix)
+        return {key: val for key, val in zip(self.tokens, result[0]) if val}

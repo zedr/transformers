@@ -1,5 +1,3 @@
-import textwrap
-
 from words import words_rxp, add_one_and_rebalance, OrderedSet, MarkovChain
 
 
@@ -55,11 +53,12 @@ def test_parse_sentence_and_apply_weights():
     ]
     chain.add_text("show me my documents please")
     assert chain._matrix == [
-        [0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 0],
-        [0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 1],
-        [0, 0, 0, 0, 0],
+        [0, 1.0, 0, 0, 0, 0],
+        [0, 0, 1.0, 0, 0, 0],
+        [0, 0, 0, 0.5, 0, 0.5],
+        [0, 0, 0, 0, 1.0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1.0, 0],
     ]
 
 
@@ -69,14 +68,28 @@ def test_render_chain_as_dot():
     chain.add_text("I give Sami a diving mask")
     result = chain.render_as_dot()
     expected = """digraph G {
-        rankdir="LR";
-        I -> give [label="1.0"];
-        give -> Lila [label="0.5"];
-        give -> Sami [label="0.5"];
-        Lila -> a [label="0.5"];
-        Sami -> a [label="0.5"];
-        a -> toy [label="0.5"];
-        a -> diving [label="0.5"];
-        toy -> boat [label="1.0"];
-    }"""
-    assert textwrap.dedent(result).strip() == expected.strip()
+    rankdir="LR";
+    I -> give [label="1.0"];
+    give -> Lila [label="0.5"];
+    give -> Sami [label="0.5"];
+    Lila -> a [label="1.0"];
+    a -> toy [label="0.5"];
+    a -> diving [label="0.5"];
+    toy -> boat [label="1.0"];
+    Sami -> a [label="1.0"];
+    diving -> mask [label="1.0"];
+}"""
+    assert result.strip() == expected.strip()
+
+
+def test_get_one_hot_encoding_for_word():
+    chain = MarkovChain()
+    chain.add_text("I give Lila a toy boat")
+    assert list(chain.encode("Lila")) == [0, 0, 1, 0, 0, 0]
+
+
+def test_get_transitions():
+    chain = MarkovChain()
+    chain.add_text("I give Lila a toy boat")
+    chain.add_text("I give Sami a diving mask")
+    assert chain.get_transitions("give") == {"Lila": 0.5, "Sami": 0.5}
