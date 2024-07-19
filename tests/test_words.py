@@ -1,3 +1,5 @@
+import textwrap
+
 from words import words_rxp, add_one_and_rebalance, OrderedSet, MarkovChain
 
 
@@ -24,6 +26,7 @@ def test_ordered_set():
     assert list(s) == ["one", "two", "three"]
     assert "one" in s
     assert s.index("one") == 0
+    assert s[0] == "one"
 
 
 def test_basic_markov_chain():
@@ -58,3 +61,22 @@ def test_parse_sentence_and_apply_weights():
         [0, 0, 0, 0, 1],
         [0, 0, 0, 0, 0],
     ]
+
+
+def test_render_chain_as_dot():
+    chain = MarkovChain()
+    chain.add_text("I give Lila a toy boat")
+    chain.add_text("I give Sami a diving mask")
+    result = chain.render_as_dot()
+    expected = """digraph G {
+        rankdir="LR";
+        I -> give [label="1.0"];
+        give -> Lila [label="0.5"];
+        give -> Sami [label="0.5"];
+        Lila -> a [label="0.5"];
+        Sami -> a [label="0.5"];
+        a -> toy [label="0.5"];
+        a -> diving [label="0.5"];
+        toy -> boat [label="1.0"];
+    }"""
+    assert textwrap.dedent(result).strip() == expected.strip()

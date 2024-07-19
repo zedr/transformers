@@ -1,3 +1,4 @@
+import os
 import re
 import math
 from typing import TypeVar, Literal, Sequence, MutableSequence
@@ -42,6 +43,9 @@ class OrderedSet:
     def index(self, item: T) -> int:
         return tuple(self._ns).index(item)
 
+    def __getitem__(self, item) -> str:
+        return tuple(self._ns)[item]
+
     def __contains__(self, item: T) -> bool:
         return item in self._ns
 
@@ -83,7 +87,7 @@ class MarkovChain:
         for num, word in enumerate(words):
             idx_word = self._words.index(word)
             try:
-                next_word = words[idx_word + 1]
+                next_word = words[num + 1]
             except IndexError:
                 pass
             else:
@@ -98,3 +102,22 @@ class MarkovChain:
             self._add_word(word)
         self._update(words)
         return self
+
+    def render_as_dot(self) -> str:
+        """Render this Markov chain as a DOT graph"""
+        lines = [
+            'digraph G {',
+            '    rankdir="LR";'
+        ]
+        for idx in range(len(self._matrix)):
+            word = self._words[idx]
+            row = self._matrix[idx]
+            for rdx, value in enumerate(row):
+                if value:
+                    next_word =self._words[rdx]
+                    lines.append(
+                        f'    {word} -> {next_word} [label="{value}"];'
+                    )
+
+        lines += "}"
+        return os.linesep.join(lines)
