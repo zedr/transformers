@@ -1,6 +1,8 @@
 import pytest
 
-from words import words_rxp, OrderedSet, MarkovChain, WeightedList
+from matrices import get_size
+from words import words_rxp, OrderedSet, MarkovChain, WeightedList, \
+    SecondOrderModel
 
 
 def test_weighted_list():
@@ -16,6 +18,8 @@ def test_weighted_list():
     seq2 = WeightedList()
     seq2.expand(size=5)
     assert list(seq2) == [0, 0, 0, 0, 0]
+    seq3 = WeightedList()
+    seq3.expand()
 
 
 def test_words_rxp():
@@ -122,3 +126,46 @@ def test_get_transitions():
     chain.add_text("I give Sami another diving mask")
     chain.add_text("I give Sami another toy boat")
     assert chain.get_transitions("give") == {"Lila": 0.25, "Sami": 0.75}
+
+
+def test_first_order_predictions():
+    chain = MarkovChain()
+    chain.add_text("Check the program log and find out whether it ran please.")
+    chain.add_text(
+        "Check the battery log and find out whether it ran down please.")
+    scores = chain.predict("Check the battery log and see if it ran")
+    # The following test fails since this first order markov chains
+    # do not support a quasi-attention mechanism.
+    with pytest.raises(AssertionError):
+        assert scores["down"] > scores["please"]
+
+
+def test_second_order_predictions():
+    model = SecondOrderModel()
+    model.add_text("Check the program log and find out whether it ran please.")
+    model.add_text(
+        "Check the battery log and find out whether it ran down please.")
+    scores = model.predict("Check the battery log and see if it ran")
+    assert scores["down"] > scores["please"]
+
+
+def test_second_order_model_basic():
+    model = SecondOrderModel()
+    model.add_text("I give Lila a toy boat")
+    assert model.tokens == ("I", "give", "Lila", "a", "toy", "boat")
+    assert model.pairs == (('I', 'give'),
+                           ('I', 'Lila'),
+                           ('give', 'Lila'),
+                           ('I', 'a'),
+                           ('give', 'a'),
+                           ('Lila', 'a'),
+                           ('I', 'toy'),
+                           ('give', 'toy'),
+                           ('Lila', 'toy'),
+                           ('a', 'toy'),
+                           ('I', 'boat'),
+                           ('give', 'boat'),
+                           ('Lila', 'boat'),
+                           ('a', 'boat'),
+                           ('toy', 'boat'))
+    assert get_size(model.as_matrix()) == (3, 3)

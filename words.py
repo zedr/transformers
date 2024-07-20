@@ -6,7 +6,7 @@ from collections import OrderedDict
 from encoder import OneHotEncoding
 from matrices import mat_mul
 
-T = TypeVar("T", str, bytes)
+T = TypeVar("T", str, bytes, tuple[str, str])
 
 LiteralTrue = Literal[True]
 
@@ -27,7 +27,8 @@ class WeightedList:
 
     def __iter__(self) -> Iterator[float]:
         tot_weight = sum(self._seq)
-        return iter(val / tot_weight if tot_weight else 0.0 for val in self._seq)
+        return iter(
+            val / tot_weight if tot_weight else 0.0 for val in self._seq)
 
     def __repr__(self):
         return f"{type(self).__name__}(initial={self._seq})"
@@ -127,7 +128,8 @@ class MarkovChain:
             for rdx, value in enumerate(row):
                 if value:
                     next_word = self._words[rdx]
-                    lines.append(f'    {word} -> {next_word} [label="{value}"];')
+                    lines.append(
+                        f'    {word} -> {next_word} [label="{value}"];')
 
         lines += "}"
         return os.linesep.join(lines)
@@ -151,3 +153,36 @@ class MarkovChain:
         """Get all the probable transitions for a word"""
         dist = self.get_distribution(word)
         return {key: val for key, val in zip(self.tokens, dist) if val}
+
+    def predict(self, text: str) -> dict[str, float]:
+        words = words_rxp.findall(text)
+        return self.get_transitions(words[-1])
+
+
+class SecondOrderModel:
+    def __init__(self):
+        self._words_ns = OrderedSet(str)
+        self._pairs_ns = OrderedSet(tuple[str, str])
+        self._matrix: list[WeightedList] = []
+
+    @property
+    def tokens(self) -> tuple[str, ...]:
+        return tuple(self._words_ns)
+
+    @property
+    def pairs(self) -> tuple[tuple[str, str], ...]:
+        return tuple(self._pairs_ns)
+
+    def add_text(self, text: str) -> None:
+        words = words_rxp.findall(text)
+        for word in words:
+            combinations = ((elem, word) for elem in self.tokens)
+            self._words_ns.add(word)
+            for comb in combinations:
+                self._pairs_ns.add(comb)
+
+    def as_matrix(self) -> list[list[float]]:
+        return [list(row) for row in self._matrix]
+
+    def predict(self, text: str) -> dict[str, float]:
+        ...

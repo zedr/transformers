@@ -3,6 +3,7 @@ from matrices import get_size, dot_product, mat_mul, take_columns
 
 def test_get_size():
     """Can get the size of a regular matrix"""
+    assert get_size([]) == (0, 0)
     assert get_size([[1, 2, 3]]) == (1, 3)
     assert get_size([[1], [2], [3]]) == (3, 1)
 

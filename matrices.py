@@ -10,7 +10,9 @@ def get_size(matrix: Sequence[Sequence[Any]]) -> Size:
     """Get the size of a matrix"""
     rows = len(matrix)
     lengths = [len(row) for row in matrix]
-    if all(True for ln in lengths if ln == (cols := lengths[0])):
+    if not rows:
+        return Size(0, 0)
+    elif all(True for ln in lengths if ln == (cols := lengths[0])):
         return Size(rows, cols)
     else:
         raise ValueError("Jagged matrices are not supported")
