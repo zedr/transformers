@@ -1,12 +1,10 @@
 import os
 import re
-from typing import TypeVar, Literal, Sequence, Optional, Iterator
+from typing import Literal, Sequence, Iterator, Generator, Hashable
 from collections import OrderedDict
 
 from encoder import OneHotEncoding
-from matrices import mat_mul
-
-T = TypeVar("T", str, bytes, tuple[str, str])
+from matrices import mat_mul, get_size, Size
 
 LiteralTrue = Literal[True]
 
@@ -14,8 +12,8 @@ words_rxp = re.compile(r"(\w+)+")
 
 
 class WeightedList:
-    def __init__(self, initial: Optional[Sequence[int]] = None):
-        self._seq = [] if initial is None else list(initial)
+    def __init__(self):
+        self._seq = []
 
     def expand(self, size: int = 1) -> "WeightedList":
         self._seq += [0] * size
@@ -28,16 +26,39 @@ class WeightedList:
     def __iter__(self) -> Iterator[float]:
         tot_weight = sum(self._seq)
         return iter(
-            val / tot_weight if tot_weight else 0.0 for val in self._seq)
-
-    def __repr__(self):
-        return f"{type(self).__name__}(initial={self._seq})"
+            val / tot_weight if tot_weight else 0.0 for val in self._seq
+        )
 
 
-class OrderedSet:
-    def __init__(self, T, initial: Sequence[T] = ()):
-        self.__ordered_dict_key_type = T
-        self._ns: dict[T, LiteralTrue] = OrderedDict()
+class WeightedMatrix:
+    def __init__(self):
+        self._rows: list[WeightedList] = []
+
+    def __iter__(self):
+        return iter(self._rows)
+
+    def __getitem__(self, item) -> WeightedList:
+        return self._rows[item]
+
+    def grow(self, /, n_cols=0, n_rows=0) -> None:
+        for _ in range(n_rows):
+            self._rows.append(WeightedList().expand(self.size.cols))
+        if n_cols and not self._rows:
+            raise ValueError("Cannot grow a matrix without rows")
+        for row in self._rows:
+            row.expand(n_cols)
+
+    def as_lists(self):
+        return [list(row) for row in self]
+
+    @property
+    def size(self) -> Size:
+        return get_size(self.as_lists())
+
+
+class OrderedSet[T: Hashable]:
+    def __init__(self, initial: Sequence[T] = ()):
+        self._ns = OrderedDict()
         for item in initial:
             self.add(item)
 
@@ -56,8 +77,8 @@ class OrderedSet:
     def index(self, item: T) -> int:
         return tuple(self._ns).index(item)
 
-    def __getitem__(self, item) -> str:
-        return tuple(self._ns)[item]
+    def __getitem__(self, idx) -> str:
+        return tuple(self._ns)[idx]
 
     def __contains__(self, item: T) -> bool:
         return item in self._ns
@@ -71,118 +92,92 @@ class OrderedSet:
     def __repr__(self):
         return (
             f"{type(self).__name__}("
-            f"{self.__ordered_dict_key_type}, "
-            f"initial={tuple(self)})"
+            f"initial={tuple(self)}"
+            f")"
         )
 
 
-class MarkovChain:
+class MarkovChain[T: Hashable]:
     """A Python representation of a Markov Chain"""
 
-    def __init__(self):
-        self._words = OrderedSet(str)
-        self._matrix: list[WeightedList] = []
+    def __init__(self, order: int = 1):
+        self._tokens: OrderedSet[T] = OrderedSet()
+        self._matrix = WeightedMatrix()
+        self._order = order
 
-    def as_matrix(self) -> list[list[float]]:
-        return [list(row) for row in self._matrix]
+    def as_lists(self) -> list[list[float]]:
+        return self._matrix.as_lists()
 
     @property
-    def tokens(self) -> tuple[str]:
-        return tuple(self._words)
+    def tokens(self) -> tuple[T, ...]:
+        return tuple(self._tokens)
 
-    def _add_word(self, word: str) -> None:
-        """Grow the namespace of the chain by adding a single word to it"""
-        added = self._words.add(word)
+    def _add_token(self, token: T) -> None:
+        """Grow the namespace of the chain by adding a single token to it"""
+        added = self._tokens.add(token)
         if added:
-            for row in self._matrix:
-                row.expand()
-            self._matrix.append(WeightedList().expand(size=len(self._words)))
+            self._matrix.grow(n_cols=1, n_rows=1)
 
-    def _update(self, words: Sequence[T]) -> None:
+    def _update(self, tokens: Sequence[T]) -> None:
         """Update this chain with the given sequence of words"""
-        for num, word in enumerate(words):
-            idx_word = self._words.index(word)
+        for num, token in enumerate(tokens):
+            idx_token = self._tokens.index(token)
             try:
-                next_word = words[num + 1]
+                next_token = tokens[num + 1]
             except IndexError:
                 pass
             else:
-                idx_next_word = self._words.index(next_word)
-                row_word = self._matrix[idx_word]
-                row_word.inc(idx_next_word)
+                idx_next_token = self._tokens.index(next_token)
+                row_token = self._matrix[idx_token]
+                row_token.inc(idx_next_token)
+
+    def _get_words(self, text: str) -> Generator[str, None, None]:
+        """Get a sequence of words from the given text"""
+        return (word for word in words_rxp.findall(text))
 
     def add_text(self, text: str) -> "MarkovChain":
         """Parse a sentence and add it to this chain"""
-        words = words_rxp.findall(text)
+        words = list(self._get_words(text))
         for word in words:
-            self._add_word(word)
+            self._add_token(word)
         self._update(words)
         return self
 
     def render_as_dot(self) -> str:
         """Render this Markov chain as a DOT graph"""
         lines = ["digraph G {", '    rankdir="LR";']
-        for idx in range(len(self._matrix)):
-            word = self._words[idx]
+        for idx in range(self._matrix.size.rows):
+            word = self._tokens[idx]
             row = self._matrix[idx]
             for rdx, value in enumerate(row):
                 if value:
-                    next_word = self._words[rdx]
+                    next_token = self._tokens[rdx]
                     lines.append(
-                        f'    {word} -> {next_word} [label="{value}"];')
-
+                        f'    {word} -> {next_token} [label="{value}"];'
+                    )
         lines += "}"
         return os.linesep.join(lines)
 
-    def encode(self, word: T) -> OneHotEncoding:
-        """Get the one hot eoding of the given word in this namespace"""
+    def encode(self, token: T) -> OneHotEncoding:
+        """Get the one hot encoding of the given token in this namespace"""
         try:
-            idx = self.tokens.index(word)
+            idx = self.tokens.index(token)
         except ValueError:
-            raise ValueError(f"Word not in namespace: '{word}'")
+            raise ValueError(f"Token not in namespace: '{token}'")
         else:
-            return OneHotEncoding(len(self.tokens), {idx: str(word)})
+            return OneHotEncoding(len(self.tokens), {idx: str(token)})
 
-    def get_distribution(self, word: T) -> list[float]:
-        """Get the one hot encoded probability distribution for a word"""
-        encoded_word = list(self.encode(word))
-        result = mat_mul([encoded_word], self.as_matrix())
+    def get_distribution(self, token: T) -> list[float]:
+        """Get the one hot encoded probability distribution for a token"""
+        encoded_token = list(self.encode(token))
+        result = mat_mul([encoded_token], self._matrix.as_lists())
         return result[0]
 
-    def get_transitions(self, word: T) -> dict[str, float]:
-        """Get all the probable transitions for a word"""
-        dist = self.get_distribution(word)
+    def get_transitions(self, token: T) -> dict[str, float]:
+        """Get all the probable transitions for a token"""
+        dist = self.get_distribution(token)
         return {key: val for key, val in zip(self.tokens, dist) if val}
 
     def predict(self, text: str) -> dict[str, float]:
         words = words_rxp.findall(text)
         return self.get_transitions(words[-1])
-
-
-class SecondOrderModel:
-    def __init__(self):
-        self._words_ns = OrderedSet(str)
-        self._pairs_ns = OrderedSet(tuple[str, str])
-        self._matrix: list[WeightedList] = []
-
-    @property
-    def tokens(self) -> tuple[str, ...]:
-        return tuple(self._words_ns)
-
-    @property
-    def pairs(self) -> tuple[tuple[str, str], ...]:
-        return tuple(self._pairs_ns)
-
-    def add_text(self, text: str) -> None:
-        words = words_rxp.findall(text)
-        for word in words:
-            combinations = ((elem, word) for elem in self.tokens)
-            self._words_ns.add(word)
-            for comb in combinations:
-                self._pairs_ns.add(comb)
-
-    def as_matrix(self) -> list[list[float]]:
-        return [list(row) for row in self._matrix]
-
-    def predict(self, text: str) -> dict[str, float]:
-        ...

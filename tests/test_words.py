@@ -1,8 +1,12 @@
 import pytest
 
-from matrices import get_size
-from words import words_rxp, OrderedSet, MarkovChain, WeightedList, \
-    SecondOrderModel
+from words import (
+    words_rxp,
+    OrderedSet,
+    MarkovChain,
+    WeightedList,
+    WeightedMatrix
+)
 
 
 def test_weighted_list():
@@ -18,8 +22,37 @@ def test_weighted_list():
     seq2 = WeightedList()
     seq2.expand(size=5)
     assert list(seq2) == [0, 0, 0, 0, 0]
-    seq3 = WeightedList()
-    seq3.expand()
+
+
+def test_matrix():
+    # At least a row and a col needed for values
+    matrix = WeightedMatrix()
+    assert list(matrix.as_lists()) == []
+    matrix.grow(n_rows=1)
+    assert list(matrix.as_lists()) == [[]]
+    matrix.grow(n_cols=1)
+    assert list(matrix.as_lists()) == [[0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_rows=1)
+    assert list(matrix.as_lists()) == [[]]
+    matrix.grow(n_cols=1)
+    assert list(matrix.as_lists()) == [[0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_rows=1, n_cols=1)
+    assert list(matrix.as_lists()) == [[0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_rows=1)
+    matrix.grow(n_cols=1)
+    matrix.grow(n_cols=2)
+    assert list(matrix.as_lists()) == [[0.0, 0.0, 0.0]]
+
+    matrix = WeightedMatrix()
+    with pytest.raises(ValueError):
+        matrix.grow(n_cols=1)
+
 
 
 def test_words_rxp():
@@ -28,7 +61,7 @@ def test_words_rxp():
 
 
 def test_ordered_set():
-    s = OrderedSet(str, initial=("one",))
+    s = OrderedSet(initial=("one",))
     s.add("two")
     s.add("two")
     s.add("three")
@@ -41,21 +74,23 @@ def test_ordered_set():
 def test_basic_markov_chain():
     chain = MarkovChain()
     assert chain.tokens == ()
-    assert chain.as_matrix() == []
+    assert chain.as_lists() == []
     chain.add_text("one")
-    assert chain.as_matrix() == [[0]]
+    assert chain.as_lists() == [[0]]
     chain.add_text("two")
-    assert chain.as_matrix() == [[0, 0], [0, 0]]
+    assert chain.as_lists() == [[0, 0], [0, 0]]
 
 
 def test_parse_sentence_into_markov_chain():
     chain = MarkovChain().add_text("show me my photos please")
-    assert chain.tokens == ("show", "me", "my", "photos", "please")
+    assert chain.tokens == (
+        ("show",), ("me",), ("my",), ("photos",), ("please",)
+    )
 
 
 def test_parse_sentence_and_apply_weights():
     chain = MarkovChain().add_text("show me my photos please")
-    assert chain.as_matrix() == [
+    assert chain.as_lists() == [
         [0, 1, 0, 0, 0],
         [0, 0, 1, 0, 0],
         [0, 0, 0, 1, 0],
@@ -63,7 +98,7 @@ def test_parse_sentence_and_apply_weights():
         [0, 0, 0, 0, 0],
     ]
     chain.add_text("show me my documents please")
-    assert chain.as_matrix() == [
+    assert chain.as_lists() == [
         [0, 1.0, 0, 0, 0, 0],
         [0, 0, 1.0, 0, 0, 0],
         [0, 0, 0, 0.5, 0, 0.5],
@@ -134,38 +169,29 @@ def test_first_order_predictions():
     chain.add_text(
         "Check the battery log and find out whether it ran down please.")
     scores = chain.predict("Check the battery log and see if it ran")
+    assert {"down", "please"} == set(scores)
     # The following test fails since this first order markov chains
     # do not support a quasi-attention mechanism.
     with pytest.raises(AssertionError):
         assert scores["down"] > scores["please"]
 
 
+def test_second_order_model_basic():
+    model = MarkovChain(order=2)
+    model.add_text("I give Lila a toy boat")
+    assert model.tokens == (
+        ('I', 'give'),
+        ('give', 'Lila'),
+        ('Lila', 'a'),
+        ('a', 'toy'),
+        ('toy', 'boat')
+    )
+
+
 def test_second_order_predictions():
-    model = SecondOrderModel()
+    model = MarkovChain()
     model.add_text("Check the program log and find out whether it ran please.")
     model.add_text(
         "Check the battery log and find out whether it ran down please.")
     scores = model.predict("Check the battery log and see if it ran")
     assert scores["down"] > scores["please"]
-
-
-def test_second_order_model_basic():
-    model = SecondOrderModel()
-    model.add_text("I give Lila a toy boat")
-    assert model.tokens == ("I", "give", "Lila", "a", "toy", "boat")
-    assert model.pairs == (('I', 'give'),
-                           ('I', 'Lila'),
-                           ('give', 'Lila'),
-                           ('I', 'a'),
-                           ('give', 'a'),
-                           ('Lila', 'a'),
-                           ('I', 'toy'),
-                           ('give', 'toy'),
-                           ('Lila', 'toy'),
-                           ('a', 'toy'),
-                           ('I', 'boat'),
-                           ('give', 'boat'),
-                           ('Lila', 'boat'),
-                           ('a', 'boat'),
-                           ('toy', 'boat'))
-    assert get_size(model.as_matrix()) == (3, 3)
