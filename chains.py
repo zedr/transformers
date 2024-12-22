@@ -76,7 +76,10 @@ class OrderedSet[T: Hashable]:
             return True
 
     def index(self, item: T) -> int:
-        return tuple(self._ns).index(item)
+        try:
+            return tuple(self._ns).index(item)
+        except ValueError:
+            raise IndexError(f"{item}")
 
     def __getitem__(self, idx) -> str:
         return tuple(self._ns)[idx]
@@ -142,3 +145,24 @@ class MarkovChain[T: Hashable]:
                     )
         lines += "}"
         return os.linesep.join(lines)
+
+    def predict(self, text: str) -> dict[str, float]:
+        """Predict the next word from the given text"""
+        prediction = {}
+        words = words_rxp.findall(text)
+        if words:
+            length = len(words)
+            tup = tuple(words[length - self._order: length])
+            try:
+                row = self._matrix.as_lists()[self._tuple_vocabulary.index(tup)]
+            except IndexError:
+                pass
+            else:
+
+                for word, probability in zip(self._vocabulary, row):
+                    if probability > 0.0:
+                        prediction[word] = probability
+        return prediction
+
+
+

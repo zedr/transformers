@@ -15,6 +15,7 @@ def test_basic_markov_chain_first_order():
         "the",
         "whether",
     ]
+    assert chain.predict("Check if the battery ran") == {"down": 0.5, "please": 0.5}
 
 
 def test_basic_markov_chain_second_order():
@@ -30,6 +31,7 @@ def test_basic_markov_chain_second_order():
         ("the", "program"),
         ("whether", "the"),
     ]
+    assert chain.predict("Check if the battery ran") == {"down": 1.0}
 
 
 def test_render_markov_chain_as_table():
@@ -73,7 +75,7 @@ def test_render_markov_chain_as_dot_graph():
 
 
 def test_render_markov_chain_second_order_as_dot_graph():
-    chain = MarkovChain(order=3)
+    chain = MarkovChain(order=2)
     chain.add_text("Show me my directories please.")
     chain.add_text("Show me my files please.")
     chain.add_text("Show me my photos please.")
