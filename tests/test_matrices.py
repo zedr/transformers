@@ -1,4 +1,5 @@
 from matrices import get_size, dot_product, mat_mul, take_columns
+from chains import WeightedList, WeightedMatrix, words_rxp, OrderedSet
 
 
 def test_get_size():
@@ -53,3 +54,70 @@ def test_mat_mul_4():
     m1 = [[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     m2 = [[0.2, 0.9], [0.7, 0.0], [0.8, 0.3], [0.1, 0.4]]
     assert mat_mul(m1, m2) == [[0.2, 0.9], [0.1, 0.4], [0.8, 0.3]]
+
+
+def test_weighted_list():
+    seq = WeightedList()
+    assert list(seq) == []
+    seq.expand()
+    seq.inc(index=0)
+    assert list(seq) == [1.0]
+    seq.expand()
+    assert list(seq) == [1.0, 0.0]
+    seq.inc(index=1)
+    assert list(seq) == [0.5, 0.5]
+    seq2 = WeightedList()
+    seq2.expand(size=5)
+    assert list(seq2) == [0, 0, 0, 0, 0]
+
+
+def test_matrix():
+    # At least a row and a col needed for values
+    matrix = WeightedMatrix()
+    assert list(matrix.as_lists()) == []
+    matrix.grow(n_rows=1)
+    assert list(matrix.as_lists()) == [[]]
+    matrix.grow(n_cols=1)
+    assert list(matrix.as_lists()) == [[0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_rows=1)
+    assert list(matrix.as_lists()) == [[]]
+    matrix.grow(n_cols=1)
+    assert list(matrix.as_lists()) == [[0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_rows=1, n_cols=1)
+    assert list(matrix.as_lists()) == [[0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_rows=1)
+    matrix.grow(n_cols=1)
+    matrix.grow(n_cols=2)
+    assert list(matrix.as_lists()) == [[0.0, 0.0, 0.0]]
+
+    matrix = WeightedMatrix()
+    matrix.grow(n_cols=1)
+    matrix.grow(n_cols=2)
+    matrix.grow(n_rows=3)
+    assert list(matrix.as_lists()) == [
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+    ]
+
+
+def test_words_rxp():
+    txt = "show me my files"
+    assert ["show", "me", "my", "files"] == words_rxp.findall(txt)
+
+
+def test_ordered_set():
+    s = OrderedSet(initial=("one",))
+    s.add("two")
+    s.add("two")
+    s.add("three")
+    assert list(s) == ["one", "two", "three"]
+    assert "one" in s
+    assert s.index("one") == 0
+    assert s[0] == "one"

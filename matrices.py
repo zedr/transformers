@@ -32,7 +32,9 @@ def dot_product(
     return acc
 
 
-def take_columns(matrix: Sequence[Sequence[T]]) -> Generator[list[T], None, None]:
+def take_columns(
+    matrix: Sequence[Sequence[T]],
+) -> Generator[list[T], None, None]:
     n_cols = get_size(matrix).cols
     for idx in range(n_cols):
         yield [row[idx] for row in matrix]
