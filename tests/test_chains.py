@@ -15,7 +15,10 @@ def test_basic_markov_chain_first_order():
         "the",
         "whether",
     ]
-    assert chain.predict("Check if the battery ran") == {"down": 0.5, "please": 0.5}
+    assert chain.predict("Check if the battery ran") == {
+        "down": 0.5,
+        "please": 0.5,
+    }
 
 
 def test_basic_markov_chain_second_order():
@@ -82,13 +85,12 @@ def test_render_markov_chain_second_order_as_dot_graph():
     assert chain.render_as_dot() == (
         "digraph G {\n"
         '    rankdir="LR"\n'
-        '    show -> me [label="1.0"]\n'
-        '    me -> my [label="1.0"]\n'
-        '    my -> directories [label="0.33"]\n'
-        '    my -> files [label="0.33"]\n'
-        '    my -> photos [label="0.33"]\n'
-        '    directories -> please [label="1.0"]\n'
-        '    files -> please [label="1.0"]\n'
-        '    photos -> please [label="1.0"]\n'
+        '    show,me -> my [label="1.0"]\n'
+        '    me,my -> directories [label="0.33"]\n'
+        '    me,my -> files [label="0.33"]\n'
+        '    me,my -> photos [label="0.33"]\n'
+        '    my,directories -> please [label="1.0"]\n'
+        '    my,files -> please [label="1.0"]\n'
+        '    my,photos -> please [label="1.0"]\n'
         "}"
     )
